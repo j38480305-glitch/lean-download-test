@@ -1,0 +1,67 @@
+name: Download portable languages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  zig:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Zig 0.16.0
+        run: |
+          curl -L --fail --retry 3 -o zig.tar.xz \
+            https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+          tar -tf zig.tar.xz | head
+          mkdir -p zig-package
+          tar -xJf zig.tar.xz -C zig-package --strip-components=1
+          ./zig-package/zig version
+      - name: Upload Zig
+        uses: actions/upload-artifact@v4
+        with:
+          name: zig-0.16.0-linux-x86_64
+          path: zig-package
+          retention-days: 3
+
+  julia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Julia 1.12.6
+        run: |
+          curl -L --fail --retry 3 -o julia.tar.gz \
+            https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz
+          mkdir -p julia-package
+          tar -xzf julia.tar.gz -C julia-package --strip-components=1
+          ./julia-package/bin/julia --version
+      - name: Upload Julia
+        uses: actions/upload-artifact@v4
+        with:
+          name: julia-1.12.6-linux-x86_64
+          path: julia-package
+          retention-days: 3
+
+  sage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SageMath 10.9
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sagemath
+          sage --version
+      - name: Package Sage executable and installation tree
+        run: |
+          mkdir -p sage-package
+          cp -a "$(readlink -f "$(command -v sage)")" sage-package/sage-real
+          # Package the system Sage tree and Python environment where available.
+          if [ -d /usr/lib/sagemath ]; then cp -a /usr/lib/sagemath sage-package/; fi
+          if [ -d /usr/share/sagemath ]; then cp -a /usr/share/sagemath sage-package/; fi
+          if [ -d /usr/lib/python3/dist-packages/sage ]; then mkdir -p sage-package/python3-dist; cp -a /usr/lib/python3/dist-packages/sage sage-package/python3-dist/; fi
+          tar -czf sage-package.tar.gz sage-package
+          ls -lh sage-package.tar.gz
+      - name: Upload SageMath package
+        uses: actions/upload-artifact@v4
+        with:
+          name: sagemath-10.9-package
+          path: sage-package.tar.gz
+          retention-days: 3
