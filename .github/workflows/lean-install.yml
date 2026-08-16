@@ -1,0 +1,31 @@
+name: Install and Verify Lean 4
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  lean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install elan
+        shell: bash
+        run: |
+          curl https://elan.lean-lang.org/elan-init.sh -sSf | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Download pinned Lean 4 toolchain
+        shell: bash
+        run: |
+          elan toolchain install leanprover/lean4:v4.32.1
+          elan default leanprover/lean4:v4.32.1
+
+      - name: Verify Lean
+        shell: bash
+        run: |
+          lean --version
+          lean Main.lean
