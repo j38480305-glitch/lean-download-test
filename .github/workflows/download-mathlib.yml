@@ -1,0 +1,46 @@
+name: Download Mathlib v4.33.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  mathlib:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install elan
+        run: |
+          curl https://elan.lean-lang.org/elan-init.sh -sSf | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Download Mathlib v4.33.0
+        run: |
+          curl -L --fail --retry 3 -o mathlib.tar.gz \
+            https://github.com/leanprover-community/mathlib4/archive/refs/tags/v4.33.0.tar.gz
+          tar -xzf mathlib.tar.gz
+          mv mathlib4-4.33.0 mathlib
+          cd mathlib
+          elan toolchain install leanprover/lean4:v4.33.0
+      - name: Get precompiled Mathlib cache
+        run: |
+          cd mathlib
+          lake exe cache get
+      - name: Verify Mathlib
+        run: |
+          cd mathlib
+          cat > Test.lean <<'EOF'
+          import Mathlib
+          example : (2 : Nat) + 2 = 4 := by norm_num
+          #check WeylGroup
+          EOF
+          lake env lean Test.lean
+      - name: Package Mathlib source and cache
+        run: |
+          tar -I 'gzip -6' -czf mathlib-v4.33.0-sandbox.tar.gz mathlib
+          ls -lh mathlib-v4.33.0-sandbox.tar.gz
+      - name: Upload Mathlib package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mathlib-v4.33.0-sandbox
+          path: mathlib-v4.33.0-sandbox.tar.gz
+          retention-days: 7
