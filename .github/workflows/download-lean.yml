@@ -1,0 +1,38 @@
+name: Download Lean 4
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  download-lean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official Lean Linux archive
+        run: |
+          curl -L --fail --retry 3 -o lean.zip \
+            https://github.com/leanprover/lean4/releases/download/v4.33.0/lean-4.33.0-linux.zip
+          ls -lh lean.zip
+      - name: Split archive into transferable chunks
+        run: |
+          split -b 450M -d lean.zip lean-part-
+          ls -lh lean-part-*
+      - name: Upload part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-4-part-1
+          path: lean-part-00
+          retention-days: 3
+      - name: Upload part 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-4-part-2
+          path: lean-part-01
+          retention-days: 3
+      - name: Upload remaining part
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-4-part-3
+          path: lean-part-02
+          retention-days: 3
